@@ -7,14 +7,13 @@ import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+import androidx.core.content.ContextCompat;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -22,11 +21,10 @@ import java.util.UUID;
 public class ActivityServeur extends AppCompatActivity {
 
     private static final String TAG = "ActivityServeur";
+    private static final String NAME = "SmartHouseApp";
     private static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothServerSocket serverSocket;
-    private static final int REQUEST_ENABLE_BT = 1;
-    private static final int REQUEST_BLUETOOTH_PERMISSION = 2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,83 +32,78 @@ public class ActivityServeur extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_serveur);
 
-        // Initialiser l'adaptateur Bluetooth
+        // Initialisation du Bluetooth
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (bluetoothAdapter == null) {
-            Toast.makeText(this, "Bluetooth n'est pas disponible sur cet appareil", Toast.LENGTH_LONG).show();
-            finish();
-            return;
-        }
-
-        // Vérifier si Bluetooth est activé
-        if (!bluetoothAdapter.isEnabled()) {
-            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.BLUETOOTH_CONNECT}, REQUEST_BLUETOOTH_PERMISSION);
-                return;
+        try {
+            if (bluetoothAdapter.isEnabled()) {
+                Log.e(TAG, "Bluetooth enabled");
+                // Démarrer le serveur Bluetooth
+                AcceptThread serverClass = new AcceptThread();
+                serverClass.start();
+            } else {
+                bluetoothAdapter.disable();
+                Log.e(TAG, "Bluetooth disabled");
+                Toast.makeText(this, "Veuillez activer le Bluetooth", Toast.LENGTH_LONG).show();
+                finish();
             }
-            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        } catch (SecurityException e) {
+            Log.e(TAG, "Security exception: " + e.getMessage());
+            Toast.makeText(this, "Permission Bluetooth manquante", Toast.LENGTH_LONG).show();
+            finish();
         }
-
-        // Démarrer le serveur Bluetooth
-        startServer();
-
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
     }
 
-    private void startServer() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.BLUETOOTH_CONNECT}, REQUEST_BLUETOOTH_PERMISSION);
-            return;
+    private class AcceptThread extends Thread {
+        private final BluetoothServerSocket mmServerSocket;
+
+        public AcceptThread() {
+            BluetoothServerSocket tmp = null;
+            try {
+                tmp = bluetoothAdapter.listenUsingInsecureRfcommWithServiceRecord(NAME, MY_UUID);
+                Log.e(TAG, "Socket serveur créé avec succès");
+            } catch (IOException e) {
+                Log.e(TAG, "Échec de la création du socket serveur", e);
+            } catch (SecurityException e) {
+                Log.e(TAG, "Exception de sécurité lors de la création du socket", e);
+            }
+            mmServerSocket = tmp;
         }
 
-        // Rendre l'appareil visible pour le jumelage
-        Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-        discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
-        startActivity(discoverableIntent);
-
-        // Démarrer le serveur dans un thread séparé
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
+        public void run() {
+            BluetoothSocket socket = null;
+            while (true) {
                 try {
-                    serverSocket = bluetoothAdapter.listenUsingRfcommWithServiceRecord("SmartHouse", MY_UUID);
-                    BluetoothSocket socket = serverSocket.accept();
-                    
-                    // Si la connexion réussit, lancer l'activité de succès
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Intent intent = new Intent(ActivityServeur.this, ConnectionSuccessActivity.class);
-                            intent.putExtra("ROLE", "serveur");
-                            startActivity(intent);
-                            finish();
-                        }
-                    });
+                    socket = mmServerSocket.accept();
+                    Log.e(TAG, "Connexion acceptée");
                 } catch (IOException e) {
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Toast.makeText(ActivityServeur.this, "Erreur de connexion", Toast.LENGTH_SHORT).show();
-                        }
-                    });
+                    Log.e(TAG, "Échec de l'acceptation de la connexion", e);
+                    break;
+                } catch (SecurityException e) {
+                    Log.e(TAG, "Exception de sécurité lors de l'acceptation", e);
+                    break;
+                }
+
+                if (socket != null) {
+                    try {
+                        mmServerSocket.close();
+                        Log.e(TAG, "Socket serveur fermé après connexion réussie");
+                        // Lancer l'activité de succès
+                        Intent intent = new Intent(ActivityServeur.this, ConnectionSuccessActivity.class);
+                        startActivity(intent);
+                    } catch (IOException e) {
+                        Log.e(TAG, "Impossible de fermer le socket serveur", e);
+                    }
+                    break;
                 }
             }
-        }).start();
-    }
+        }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (serverSocket != null) {
+        public void cancel() {
             try {
-                serverSocket.close();
+                mmServerSocket.close();
+                Log.e(TAG, "Socket serveur fermé");
             } catch (IOException e) {
-                // Ignorer
+                Log.e(TAG, "Impossible de fermer le socket serveur", e);
             }
         }
     }

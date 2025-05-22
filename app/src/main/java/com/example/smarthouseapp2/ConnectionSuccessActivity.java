@@ -42,6 +42,8 @@ public class ConnectionSuccessActivity extends AppCompatActivity {
     private Runnable runnableCode;
     private Handler mainHandler;
 
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -60,38 +62,45 @@ public class ConnectionSuccessActivity extends AppCompatActivity {
                         // Parser le message JSON reçu
                         JSONArray response = new JSONArray(message);
                         
-                        // Vider le layout avant d'ajouter les nouveaux appareils
-                        linearLayout.removeAllViews();
+                        // Exécuter les modifications UI sur le thread principal
+                        runOnUiThread(() -> {
+                            try {
+                                // Vider le layout avant d'ajouter les nouveaux appareils
+                                linearLayout.removeAllViews();
 
-                        // Parcours de tous les appareils et ajout des vues dans le layout
-                        for (int i = 0; i < response.length(); i++) {
-                            JSONObject device = response.getJSONObject(i);
+                                // Parcours de tous les appareils et ajout des vues dans le layout
+                                for (int i = 0; i < response.length(); i++) {
+                                    JSONObject device = response.getJSONObject(i);
 
-                            View deviceView = createDeviceView(
-                                device.getInt("ID"),
-                                " [ " + device.getString("BRAND") + " ] " + device.getString("NAME"),
-                                device.getString("MODEL")
-                                    + (device.getString("DATA").isEmpty() ? "" : " | DATA: " + device.getString("DATA"))
-                                    + (device.getInt("AUTONOMY") == -1 ? "" : " | AUTONOMY: " + device.getString("AUTONOMY") + "%"),
-                                device.getInt("STATE") == 1
-                            );
+                                    View deviceView = createDeviceView(
+                                        device.getInt("ID"),
+                                        " [ " + device.getString("BRAND") + " ] " + device.getString("NAME"),
+                                        device.getString("MODEL")
+                                            + (device.getString("DATA").isEmpty() ? "" : " | DATA: " + device.getString("DATA"))
+                                            + (device.getInt("AUTONOMY") == -1 ? "" : " | AUTONOMY: " + device.getString("AUTONOMY") + "%"),
+                                        device.getInt("STATE") == 1
+                                    );
 
-                            if (deviceView.getParent() != null) {
-                                ((ViewGroup) deviceView.getParent()).removeView(deviceView);
+                                    if (deviceView.getParent() != null) {
+                                        ((ViewGroup) deviceView.getParent()).removeView(deviceView);
+                                    }
+                                    linearLayout.addView(deviceView);
+
+                                    // Ajout d'un espace vertical entre les appareils
+                                    View spacer = new View(ConnectionSuccessActivity.this);
+                                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                                        LinearLayout.LayoutParams.MATCH_PARENT,
+                                        30); // 30dp de hauteur pour l'espace
+                                    spacer.setLayoutParams(params);
+                                    linearLayout.addView(spacer);
+                                }
+                            } catch (JSONException e) {
+                                Log.e(TAG, "Erreur lors du parsing JSON: " + e.getMessage());
+                                Toast.makeText(ConnectionSuccessActivity.this, "Erreur lors du chargement des données", Toast.LENGTH_SHORT).show();
                             }
-                            linearLayout.addView(deviceView);
-
-                            // Ajout d'un espace vertical entre les appareils
-                            View spacer = new View(ConnectionSuccessActivity.this);
-                            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                                LinearLayout.LayoutParams.MATCH_PARENT,
-                                30); // 30dp de hauteur pour l'espace
-                            spacer.setLayoutParams(params);
-                            linearLayout.addView(spacer);
-                        }
+                        });
                     } catch (JSONException e) {
-                        Log.e(TAG, "Erreur lors du parsing JSON: " + e.getMessage());
-                        Toast.makeText(ConnectionSuccessActivity.this, "Erreur lors du chargement des données", Toast.LENGTH_SHORT).show();
+                        Log.e(TAG, "Erreur lors du parsing JSON initial: " + e.getMessage());
                     }
                 });
                 
@@ -203,7 +212,9 @@ public class ConnectionSuccessActivity extends AppCompatActivity {
 
     //methode pour l'envoi de la requete off/on lors du click sur le boutton
     private void sendTurnOnOffRequest(final int deviceId) {
-
+        // Envoyer la réponse JSON au client
+        BluetoothConnectionManager.getInstance().sendMessage(String.valueOf(deviceId));
+        Log.d(TAG, "id device à allumer/eteindre envoyé");
         }
 
     @Override

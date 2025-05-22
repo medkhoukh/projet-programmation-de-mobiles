@@ -91,10 +91,14 @@ public class ActivityServeur extends AppCompatActivity {
                     try {
                         mmServerSocket.close();
                         Log.e(TAG, "Socket serveur fermé après connexion réussie");
+                        
+                        // Initialiser le BluetoothConnectionManager avec le socket
+                        BluetoothConnectionManager.getInstance().setConnectedThread(socket);
+                        Log.e(TAG, "BluetoothConnectionManager initialisé avec le socket");
+
                         // Lancer l'activité de succès
                         Intent intent = new Intent(ActivityServeur.this, MainActivity2.class);
                         startActivity(intent);
-
 
                     } catch (IOException e) {
                         Log.e(TAG, "Impossible de fermer le socket serveur", e);
@@ -105,9 +109,9 @@ public class ActivityServeur extends AppCompatActivity {
                     connectedThread.start();
 
                     // Envoyer un message de test
-                    String testMessage = "Hello from Server!";
-                    connectedThread.write(testMessage.getBytes());
-                    Log.e(TAG, "Message de test envoyé: " + testMessage);
+                    //String testMessage = "Hello from Server!";
+                    //connectedThread.write(testMessage.getBytes());
+                    //Log.e(TAG, "Message de test envoyé: " + testMessage);
 
                     // Lancer l'activité de succès
                     break;

@@ -16,6 +16,8 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.UUID;
 
 public class ActivityServeur extends AppCompatActivity {
@@ -40,6 +42,7 @@ public class ActivityServeur extends AppCompatActivity {
                 // Démarrer le serveur Bluetooth
                 AcceptThread serverClass = new AcceptThread();
                 serverClass.start();
+
             } else {
                 bluetoothAdapter.disable();
                 Log.e(TAG, "Bluetooth disabled");
@@ -51,6 +54,7 @@ public class ActivityServeur extends AppCompatActivity {
             Toast.makeText(this, "Permission Bluetooth manquante", Toast.LENGTH_LONG).show();
             finish();
         }
+
     }
 
     private class AcceptThread extends Thread {
@@ -88,11 +92,24 @@ public class ActivityServeur extends AppCompatActivity {
                         mmServerSocket.close();
                         Log.e(TAG, "Socket serveur fermé après connexion réussie");
                         // Lancer l'activité de succès
-                        Intent intent = new Intent(ActivityServeur.this, ConnectionSuccessActivity.class);
+                        Intent intent = new Intent(ActivityServeur.this, MainActivity2.class);
                         startActivity(intent);
+
+
                     } catch (IOException e) {
                         Log.e(TAG, "Impossible de fermer le socket serveur", e);
                     }
+
+                    // Créer et démarrer le thread de connexion
+                    ConnectedThread connectedThread = new ConnectedThread(socket);
+                    connectedThread.start();
+
+                    // Envoyer un message de test
+                    String testMessage = "Hello from Server!";
+                    connectedThread.write(testMessage.getBytes());
+                    Log.e(TAG, "Message de test envoyé: " + testMessage);
+
+                    // Lancer l'activité de succès
                     break;
                 }
             }
@@ -107,4 +124,66 @@ public class ActivityServeur extends AppCompatActivity {
             }
         }
     }
+
+    public static class SocketHandler {
+
+        private static BluetoothSocket socket;
+
+        //public static synchronized BluetoothSocket getSocket() {
+        //return socket;
+        // }
+
+        public static synchronized void setSocket(BluetoothSocket socket) {
+            SocketHandler.socket = socket;
+        }
+    }
+
+    /**
+     * Le Thread pour envoyer les messages (par Bytes).
+     */
+    private static class ConnectedThread extends Thread {
+        private final BluetoothSocket bluetoothSocket;
+        private final InputStream inputStream;
+        private final OutputStream outputStream;
+
+        public ConnectedThread(BluetoothSocket socket) {
+            bluetoothSocket = socket;
+            InputStream temponIn = null;
+            OutputStream temponOut = null;
+
+            try {
+                temponIn = bluetoothSocket.getInputStream();
+                temponOut = bluetoothSocket.getOutputStream();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            inputStream = temponIn;
+            outputStream = temponOut;
+        }
+
+        public void run() {
+            byte[] buffer = new byte[1024];
+            int bytes;
+
+            while (true) {
+                try {
+                    bytes = inputStream.read(buffer);
+                    // conversion en String
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    break;
+                }
+            }
+        }
+
+        public void write(byte[] bytes) {
+            try {
+                outputStream.write(bytes);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
 }

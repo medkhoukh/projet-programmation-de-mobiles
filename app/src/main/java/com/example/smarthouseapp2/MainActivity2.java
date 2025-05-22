@@ -1,5 +1,9 @@
 package com.example.smarthouseapp2;
 
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -13,6 +17,7 @@ import android.widget.ToggleButton;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -70,10 +75,12 @@ public class MainActivity2 extends AppCompatActivity {
                             @Override
                             public void onResponse(JSONArray response) {
                                 try {
+                                    // Vider le layout avant d'ajouter les nouveaux appareils
+                                    linearLayout.removeAllViews();
+
                                     // Parcours de tous les appareils
                                     for (int i = 0; i < response.length(); i++) {
                                         JSONObject device = response.getJSONObject(i);
-
 
                                         View deviceView = createDeviceView(device.getInt("ID"),
                                                 " [ " + device.getString("BRAND") + " ] " + device.getString("NAME"),
@@ -94,7 +101,6 @@ public class MainActivity2 extends AppCompatActivity {
                                                 30); // 20dp de hauteur pour l'espace
                                         spacer.setLayoutParams(params);
                                         linearLayout.addView(spacer);
-
                                     }
                                 } catch (JSONException e) {
                                     Log.e(TAG, "Erreur lors du parsing JSON: " + e.getMessage());
@@ -120,63 +126,90 @@ public class MainActivity2 extends AppCompatActivity {
                     return insets;
                 });
 
-
-
                 handler.postDelayed(this, 1000);
             }
-
-            };
-
-
-
-
-
+        };
     }
 
     public View createDeviceView(int id, String nomAppareil, String informations, Boolean isOn) {
-        RelativeLayout layout = new RelativeLayout ( this ) ;
+        RelativeLayout layout = new RelativeLayout(this);
+
+        // Création d'un fond gris arrondi pour le layout
+        GradientDrawable shape = new GradientDrawable();
+        shape.setCornerRadius(16); // coins arrondis
+        shape.setColor(Color.parseColor("#EEEEEE")); // couleur gris clair
+        layout.setBackground(shape);
+
+        // Ajouter une marge interne (padding) pour l'apparence
+        layout.setPadding(30, 30, 30, 30);
+
         //paramètres de position relative
-        RelativeLayout . LayoutParams paramsTopLeft =
-                new RelativeLayout . LayoutParams (
-                        RelativeLayout . LayoutParams .WRAP_CONTENT,
-                        RelativeLayout . LayoutParams .WRAP_CONTENT) ;
-        paramsTopLeft . addRule ( RelativeLayout .ALIGN_PARENT_LEFT,
-                RelativeLayout .TRUE) ;
-        paramsTopLeft . addRule ( RelativeLayout .ALIGN_PARENT_TOP,
-                RelativeLayout .TRUE) ;
+        RelativeLayout.LayoutParams paramsTopLeft =
+                new RelativeLayout.LayoutParams(
+                        RelativeLayout.LayoutParams.WRAP_CONTENT,
+                        RelativeLayout.LayoutParams.WRAP_CONTENT);
+        paramsTopLeft.addRule(RelativeLayout.ALIGN_PARENT_LEFT,
+                RelativeLayout.TRUE);
+        paramsTopLeft.addRule(RelativeLayout.ALIGN_PARENT_TOP,
+                RelativeLayout.TRUE);
 
-        RelativeLayout . LayoutParams paramsBottomLeft =
-                new RelativeLayout . LayoutParams (
-                        RelativeLayout . LayoutParams .WRAP_CONTENT,
-                        RelativeLayout . LayoutParams .WRAP_CONTENT) ;
-        paramsBottomLeft . addRule ( RelativeLayout .ALIGN_PARENT_LEFT,
-                RelativeLayout .TRUE) ;
-        paramsBottomLeft . addRule ( RelativeLayout .ALIGN_PARENT_BOTTOM,
-                RelativeLayout .TRUE) ;
+        RelativeLayout.LayoutParams paramsBottomLeft =
+                new RelativeLayout.LayoutParams(
+                        RelativeLayout.LayoutParams.WRAP_CONTENT,
+                        RelativeLayout.LayoutParams.WRAP_CONTENT);
+        paramsBottomLeft.addRule(RelativeLayout.ALIGN_PARENT_LEFT,
+                RelativeLayout.TRUE);
+        paramsBottomLeft.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM,
+                RelativeLayout.TRUE);
 
-        RelativeLayout . LayoutParams paramsBottomRight =
-                new RelativeLayout . LayoutParams (
-                        RelativeLayout . LayoutParams .WRAP_CONTENT,
-                        RelativeLayout . LayoutParams .WRAP_CONTENT) ;
-        paramsBottomRight . addRule ( RelativeLayout .ALIGN_PARENT_RIGHT,
-                RelativeLayout .TRUE) ;
-        paramsBottomRight . addRule ( RelativeLayout .ALIGN_PARENT_BOTTOM,
-                RelativeLayout .TRUE) ;
+        RelativeLayout.LayoutParams paramsBottomRight =
+                new RelativeLayout.LayoutParams(
+                        RelativeLayout.LayoutParams.WRAP_CONTENT,
+                        RelativeLayout.LayoutParams.WRAP_CONTENT);
+        paramsBottomRight.addRule(RelativeLayout.ALIGN_PARENT_RIGHT,
+                RelativeLayout.TRUE);
+        paramsBottomRight.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM,
+                RelativeLayout.TRUE);
 
         //ajout du texte
-        TextView textNomAppareil = new TextView ( this ) ;
-        textNomAppareil.setText (nomAppareil);
-        layout . addView ( textNomAppareil, paramsTopLeft ) ;
+        TextView textNomAppareil = new TextView(this);
+        textNomAppareil.setText(nomAppareil);
+        textNomAppareil.setTextSize(18); // Taille de texte plus grande
+        textNomAppareil.setTextColor(Color.BLACK); // Texte en noir
+        layout.addView(textNomAppareil, paramsTopLeft);
 
-        TextView textInformationAppareil = new TextView ( this ) ;
-        textInformationAppareil.setText (informations);
-        layout . addView ( textInformationAppareil, paramsBottomLeft ) ;
+        TextView textInformationAppareil = new TextView(this);
+        textInformationAppareil.setText(informations);
+        textInformationAppareil.setTextColor(Color.DKGRAY); // Texte en gris foncé
+        layout.addView(textInformationAppareil, paramsBottomLeft);
 
         // Création du bouton ON/OFF
         ToggleButton toggleButton = new ToggleButton(this);
         toggleButton.setTextOn("ON");
         toggleButton.setTextOff("OFF");
-        toggleButton.setChecked(isOn);   //vérifier l'état du boutton à partir des paramètres de la fonction qu'on recevra à partir de la methode GET
+        toggleButton.setChecked(isOn); //verifier l'état du boutton à partir du paramètre isOn qui sera recup depuis l'endpoint GET
+
+        // Configuration des couleurs du bouton
+        toggleButton.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                // Vert quand ON
+                buttonView.setBackgroundColor(Color.parseColor("#4CAF50")); // Vert
+                buttonView.setTextColor(Color.WHITE);
+            } else {
+                // Rouge quand OFF
+                buttonView.setBackgroundColor(Color.parseColor("#F44336")); // Rouge
+                buttonView.setTextColor(Color.WHITE);
+            }
+        });
+
+        // Initialiser la couleur du bouton selon son état
+        if (isOn) {
+            toggleButton.setBackgroundColor(Color.parseColor("#4CAF50")); // Vert
+            toggleButton.setTextColor(Color.WHITE);
+        } else {
+            toggleButton.setBackgroundColor(Color.parseColor("#F44336")); // Rouge
+            toggleButton.setTextColor(Color.WHITE);
+        }
 
         toggleButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -204,7 +237,7 @@ public class MainActivity2 extends AppCompatActivity {
                     @Override
                     public void onResponse(String response) {
                         Log.d(TAG, "État changé avec succès: " + response);
-                        Toast.makeText(MainActivity2.this, "État de l'appareil modifié", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity2.this, "État modifié avec succès", Toast.LENGTH_SHORT).show();
                     }
                 },
                 new Response.ErrorListener() {
@@ -236,30 +269,19 @@ public class MainActivity2 extends AppCompatActivity {
         queue.add(stringRequest);
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
 
-
-        @Override
-        protected void onResume() {
-            super.onResume();
-
-            // Démarre l'exécution périodique
-            handler.post(runnableCode);
-        }
-
-        @Override
-        protected void onPause() {
-            super.onPause();
-
-            // Stoppe les appels programmés quand l’activité est en pause
-            handler.removeCallbacks(runnableCode);
-        }
-
-
-
-
+        // Démarre l'exécution périodique
+        handler.post(runnableCode);
     }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
 
-
-
-
+        // Stoppe les appels programmés quand l'activité est en pause
+        handler.removeCallbacks(runnableCode);
+    }
+}

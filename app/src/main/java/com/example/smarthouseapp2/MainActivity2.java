@@ -43,8 +43,8 @@ import java.util.Map;
 public class MainActivity2 extends AppCompatActivity {
     private static final String TAG = "MainActivity2";
 
-    private Handler handler = new Handler ();
-    private Runnable runnableCode ;
+    private Handler handler = new Handler();
+    private Runnable runnableCode;
     private LinearLayout linearLayout;
     private static final String URL = "http://happyresto.enseeiht.fr/smartHouse/api/v1/devices/32";
     private static final String POST_URL = "http://happyresto.enseeiht.fr/smartHouse/api/v1/devices/";
@@ -57,78 +57,85 @@ public class MainActivity2 extends AppCompatActivity {
         setContentView(R.layout.activity_main2);
 
         linearLayout = findViewById(R.id.linearLayout);
+        
+        // Initialisation du runnable pour l'envoi périodique du message Bluetooth
+        runnableCode = new Runnable() {
+            @Override
+            public void run() {
+                // Envoyer le message "hello" via Bluetooth
+                BluetoothConnectionManager.getInstance().sendMessage("hello");
+                Log.d(TAG, "Message 'hello' envoyé via Bluetooth");
+                
+                // Programmer le prochain envoi dans 5 secondes
+                handler.postDelayed(this, 5000);
+            }
+        };
+
+        // Démarrer l'envoi périodique
+        handler.post(runnableCode);
+
         // Initialisation de la file de requêtes Volley
         RequestQueue queue = Volley.newRequestQueue(this);
 
-        //initialisation du runnable pour un raffraichissement des données
-        runnableCode = new Runnable(){
-            @Override
-            public void run(){
-                Log.d(TAG,"appel périodique");
+        // Création de la requête JSON
+        JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(
+                Request.Method.GET,
+                URL,
+                null,
+                new Response.Listener<JSONArray>() {
+                    @Override
+                    public void onResponse(JSONArray response) {
+                        try {
+                            // Vider le layout avant d'ajouter les nouveaux appareils
+                            linearLayout.removeAllViews();
 
-                // Création de la requête JSON
-                JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(
-                        Request.Method.GET,
-                        URL,
-                        null,
-                        new Response.Listener<JSONArray>() {
-                            @Override
-                            public void onResponse(JSONArray response) {
-                                try {
-                                    // Vider le layout avant d'ajouter les nouveaux appareils
-                                    linearLayout.removeAllViews();
+                            // Parcours de tous les appareils
+                            for (int i = 0; i < response.length(); i++) {
+                                JSONObject device = response.getJSONObject(i);
 
-                                    // Parcours de tous les appareils
-                                    for (int i = 0; i < response.length(); i++) {
-                                        JSONObject device = response.getJSONObject(i);
-
-                                        View deviceView = createDeviceView(device.getInt("ID"),
-                                                " [ " + device.getString("BRAND") + " ] " + device.getString("NAME"),
-                                                device.getString("MODEL")
-                                                        + ( device.getString("DATA").isEmpty() ? "" : " | DATA: " + device.getString("DATA"))
-                                                        + ( device.getInt("AUTONOMY") == -1 ? "" : " | AUTONOMY: " + device.getString("AUTONOMY" ) + "%"),
-                                                device.getInt("STATE") == 1
-                                        );
-                                        if (deviceView.getParent() != null) {
-                                            ((ViewGroup) deviceView.getParent()).removeView(deviceView);
-                                        }
-                                        linearLayout.addView(deviceView);
-
-                                        // Ajout d'un espace vertical entre les appareils
-                                        View spacer = new View(MainActivity2.this);
-                                        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                                                LinearLayout.LayoutParams.MATCH_PARENT,
-                                                30); // 20dp de hauteur pour l'espace
-                                        spacer.setLayoutParams(params);
-                                        linearLayout.addView(spacer);
-                                    }
-                                } catch (JSONException e) {
-                                    Log.e(TAG, "Erreur lors du parsing JSON: " + e.getMessage());
-                                    Toast.makeText(MainActivity2.this, "Erreur lors du chargement des données", Toast.LENGTH_SHORT).show();
+                                View deviceView = createDeviceView(device.getInt("ID"),
+                                        " [ " + device.getString("BRAND") + " ] " + device.getString("NAME"),
+                                        device.getString("MODEL")
+                                                + ( device.getString("DATA").isEmpty() ? "" : " | DATA: " + device.getString("DATA"))
+                                                + ( device.getInt("AUTONOMY") == -1 ? "" : " | AUTONOMY: " + device.getString("AUTONOMY" ) + "%"),
+                                        device.getInt("STATE") == 1
+                                );
+                                if (deviceView.getParent() != null) {
+                                    ((ViewGroup) deviceView.getParent()).removeView(deviceView);
                                 }
+                                linearLayout.addView(deviceView);
+
+                                // Ajout d'un espace vertical entre les appareils
+                                View spacer = new View(MainActivity2.this);
+                                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                                        LinearLayout.LayoutParams.MATCH_PARENT,
+                                        30); // 20dp de hauteur pour l'espace
+                                spacer.setLayoutParams(params);
+                                linearLayout.addView(spacer);
                             }
-                        },
-                        new Response.ErrorListener() {
-                            @Override
-                            public void onErrorResponse(VolleyError error) {
-                                Log.e(TAG, "Erreur Volley: " + error.getMessage());
-                                Toast.makeText(MainActivity2.this, "Erreur lors de la connexion au serveur", Toast.LENGTH_SHORT).show();
-                            }
+                        } catch (JSONException e) {
+                            Log.e(TAG, "Erreur lors du parsing JSON: " + e.getMessage());
+                            Toast.makeText(MainActivity2.this, "Erreur lors du chargement des données", Toast.LENGTH_SHORT).show();
                         }
-                );
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Log.e(TAG, "Erreur Volley: " + error.getMessage());
+                        Toast.makeText(MainActivity2.this, "Erreur lors de la connexion au serveur", Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
 
-                // Ajout de la requête à la file
-                queue.add(jsonArrayRequest);
+        // Ajout de la requête à la file
+        queue.add(jsonArrayRequest);
 
-                ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-                    Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-                    v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-                    return insets;
-                });
-
-                handler.postDelayed(this, 1000);
-            }
-        };
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            return insets;
+        });
     }
 
     public View createDeviceView(int id, String nomAppareil, String informations, Boolean isOn) {
@@ -270,18 +277,9 @@ public class MainActivity2 extends AppCompatActivity {
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-
-        // Démarre l'exécution périodique
-        handler.post(runnableCode);
-    }
-
-    @Override
     protected void onPause() {
         super.onPause();
-
-        // Stoppe les appels programmés quand l'activité est en pause
+        // Arrêter l'envoi périodique quand l'activité est en pause
         handler.removeCallbacks(runnableCode);
     }
 }

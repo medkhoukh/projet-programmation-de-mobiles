@@ -212,10 +212,21 @@ public class ConnectionSuccessActivity extends AppCompatActivity {
 
     //methode pour l'envoi de la requete off/on lors du click sur le boutton
     private void sendTurnOnOffRequest(final int deviceId) {
-        // Envoyer la réponse JSON au client
-        BluetoothConnectionManager.getInstance().sendMessage(String.valueOf(deviceId));
-        Log.d(TAG, "id device à allumer/eteindre envoyé");
+        JSONObject obj = new JSONObject();
+        try {
+            obj.put("deviceId", deviceId);
+            // Ajoute un champ 'padding' pour allonger le message
+            StringBuilder padding = new StringBuilder();
+            for (int i = 0; i < 1900; i++) { // 500 caractères pour dépasser le buffer
+                padding.append("X");
+            }
+            obj.put("padding", padding.toString());
+            BluetoothConnectionManager.getInstance().sendMessage(obj.toString());
+            Log.d(TAG, "id device à allumer/eteindre envoyé (JSON long): " + obj.toString());
+        } catch (JSONException e) {
+            Log.e(TAG, "Erreur lors de la création du JSON pour l'envoi de l'ID: " + e.getMessage());
         }
+    }
 
     @Override
     protected void onResume() {

@@ -36,6 +36,10 @@ public class BluetoothConnectionManager {
     }
 
     public void setConnectedThread(BluetoothSocket socket) {
+        Log.d(TAG, "setConnectedThread appelé avec socket: " + socket);
+        if (connectedThread != null) {
+            connectedThread.cancel();
+        }
         connectedThread = new ConnectedThread(socket);
         connectedThread.start();
     }
@@ -119,6 +123,15 @@ public class BluetoothConnectionManager {
             } catch (IOException e) {
                 Log.e(TAG, "Erreur lors de l'envoi du message: " + e.getMessage());
                 e.printStackTrace();
+            }
+        }
+
+        public void cancel() {
+            try {
+                bluetoothSocket.close();
+                Log.d(TAG, "Socket Bluetooth fermé proprement: " + bluetoothSocket);
+            } catch (IOException e) {
+                Log.e(TAG, "Erreur lors de la fermeture du socket", e);
             }
         }
     }

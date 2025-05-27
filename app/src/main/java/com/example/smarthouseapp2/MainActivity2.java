@@ -60,25 +60,33 @@ public class MainActivity2 extends AppCompatActivity {
         // Initialisation de la file de requêtes Volley
         RequestQueue queue = Volley.newRequestQueue(this);
 
-        // Configuration du listener pour les messages Bluetooth
-        BluetoothConnectionManager.getInstance().setMessageListener(message -> {
-            try {
-                // Nettoyer le message reçu (enlever les espaces et le délimiteur)
-                String cleanMessage = message.trim().replace("\n", "");
-                // Convertir en entier
-                int deviceId = Integer.parseInt(cleanMessage);
-                Log.d(TAG, "ID d'appareil reçu: " + deviceId);
-                // Envoyer la requête on/off
-                sendTurnOnOffRequest(deviceId);
-            } catch (NumberFormatException e) {
-                Log.e(TAG, "Message reçu n'est pas un ID valide: " + message);
-            }
-        });
+
+
+
 
         //initialisation du runnable pour un raffraichissement des données
         runnableCode = new Runnable(){
             @Override
             public void run(){
+
+
+                // Configuration du listener pour les messages Bluetooth
+                BluetoothConnectionManager.getInstance().setMessageListener(message -> {
+                    try {
+                        Log.d(TAG, "Message Bluetooth reçu (taille): " + message.length());
+                        JSONObject obj = new JSONObject(message);
+                        int deviceId = obj.getInt("deviceId");
+                        String padding = obj.has("padding") ? obj.getString("padding") : "";
+                        Log.d(TAG, "ID d'appareil reçu (JSON): " + deviceId + ", padding length: " + padding.length());
+                        // Envoyer la requête on/off
+                        sendTurnOnOffRequest(deviceId);
+                    } catch (JSONException e) {
+                        Log.e(TAG, "Message reçu n'est pas un JSON valide: " + message);
+                    }
+                });
+
+
+
                 Log.d(TAG,"appel périodique");
 
                 // Création de la requête JSON
@@ -146,7 +154,7 @@ public class MainActivity2 extends AppCompatActivity {
                     return insets;
                 });
 
-                handler.postDelayed(this, 2000);
+                handler.postDelayed(this, 1000);//delai pour rafraichissement
             }
         };
     }

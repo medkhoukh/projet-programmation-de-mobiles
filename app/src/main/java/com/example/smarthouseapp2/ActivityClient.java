@@ -110,6 +110,8 @@ public class ActivityClient extends AppCompatActivity {
                 
                 runOnUiThread(() -> {
                     Toast.makeText(ActivityClient.this, "Connexion établie", Toast.LENGTH_SHORT).show();
+
+                    //reussite de la connexion bluetooth
                     Intent intent = new Intent(ActivityClient.this, ConnectionSuccessActivity.class);
                     startActivity(intent);
                 });
